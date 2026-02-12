@@ -1,16 +1,21 @@
-import { StyleSheet, TouchableOpacity, View, Alert } from 'react-native';
-import { useCallback, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
-import { format } from 'date-fns';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { format } from 'date-fns';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
+import { useTheme } from '@/components/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { TASKS, DailyProgress } from '@/types';
-import { getDayProgress, updateDailyProgress, getStreak, getStorageData } from '@/utils/storage';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useTheme } from '@/components/ThemeContext';
+import { DailyProgress, TASKS } from '@/types';
+import { getDayProgress, getStorageData, getStreak, updateDailyProgress } from '@/utils/storage';
+
+import { ProgressCard } from '@/components/dashboard/ProgressCard';
+import { QuoteCard } from '@/components/dashboard/QuoteCard';
+import { StreakCard } from '@/components/dashboard/StreakCard';
+import { TaskItem } from '@/components/dashboard/TaskItem';
 
 const QUOTES = [
   "Dream it. Believe it. Build it.",
@@ -85,55 +90,34 @@ export default function DashboardScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <View style={styles.headerRow}>
-        <View>
-          <ThemedText type="title">Hard Mode 75</ThemedText>
-          <ThemedText style={styles.subtitle}>No excuses. Just discipline.</ThemedText>
-        </View>
-        <TouchableOpacity onPress={toggleTheme} style={styles.themeButton}>
-          <MaterialCommunityIcons name={colorScheme === 'dark' ? 'weather-sunny' : 'weather-night'} size={24} color={themeColors.text} />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.quoteContainer}>
-        <ThemedText style={styles.quoteText}>"{quote}"</ThemedText>
-      </View>
-
-      <View style={[styles.streakCard, { backgroundColor: '#3B82F6' }]}>
-        <ThemedText style={styles.streakLabel}>CURRENT STREAK</ThemedText>
-        <ThemedText style={styles.streakValue}>Day {streak} of 75</ThemedText>
-      </View>
-
-      <View style={styles.progressContainer}>
-        <View style={styles.progressLabelRow}>
-          <ThemedText>Today's Progress</ThemedText>
-          <ThemedText>{Math.round(progress * 100)}%</ThemedText>
-        </View>
-        <View style={[styles.progressBarBackground, { backgroundColor: colorScheme === 'dark' ? '#333' : '#E5E7EB' }]}>
-          <View style={[styles.progressBarFill, { width: `${progress * 100}%`, backgroundColor: '#3B82F6' }]} />
-        </View>
-      </View>
-
-      <View style={styles.tasksContainer}>
-        {TASKS.map((task) => (
-          <TouchableOpacity
-            key={task.id}
-            style={styles.taskRow}
-            onPress={() => handleToggle(task.id as keyof DailyProgress)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.taskIcon}>
-              <MaterialCommunityIcons name={task.icon as any} size={24} color={themeColors.text} />
-            </View>
-            <ThemedText style={styles.taskLabel}>{task.label}</ThemedText>
-            <View style={[styles.checkbox, tasks && tasks[task.id as keyof DailyProgress] && styles.checkboxChecked]}>
-              {tasks && tasks[task.id as keyof DailyProgress] && (
-                <MaterialCommunityIcons name="check" size={16} color="white" />
-              )}
-            </View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.headerRow}>
+          <View>
+            <ThemedText type="title">Hard Mode 75</ThemedText>
+            <ThemedText style={styles.subtitle}>No excuses. Just discipline.</ThemedText>
+          </View>
+          <TouchableOpacity onPress={toggleTheme} style={styles.themeButton}>
+            <MaterialCommunityIcons name={colorScheme === 'dark' ? 'weather-sunny' : 'weather-night'} size={24} color={themeColors.text} />
           </TouchableOpacity>
-        ))}
-      </View>
+        </View>
+
+        <QuoteCard quote={quote} />
+
+        <StreakCard streak={streak} />
+
+        <ProgressCard progress={progress} />
+
+        <View style={styles.tasksContainer}>
+          {TASKS.map((task) => (
+            <TaskItem
+              key={task.id}
+              task={task}
+              isCompleted={!!tasks && !!tasks[task.id as keyof DailyProgress]}
+              onToggle={() => handleToggle(task.id as keyof DailyProgress)}
+            />
+          ))}
+        </View>
+      </ScrollView>
     </ThemedView>
   );
 }
@@ -141,16 +125,16 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContent: {
     padding: 20,
     paddingTop: 60,
+    paddingBottom: 40,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-  },
-  header: {
     marginBottom: 20,
   },
   themeButton: {
@@ -162,88 +146,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     opacity: 0.7,
   },
-  quoteContainer: {
-    marginBottom: 20,
-    padding: 15,
-    borderRadius: 12,
-    backgroundColor: 'rgba(150, 150, 150, 0.1)',
-    borderLeftWidth: 4,
-    borderLeftColor: '#3B82F6',
-  },
-  quoteText: {
-    fontStyle: 'italic',
-    fontSize: 14,
-  },
-  streakCard: {
-    padding: 25,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginBottom: 25,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.30,
-    shadowRadius: 4.65,
-    elevation: 8,
-  },
-  streakLabel: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 12,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-    marginBottom: 5,
-  },
-  streakValue: {
-    color: 'white',
-    fontSize: 32,
-    fontWeight: 'bold',
-  },
-  progressContainer: {
-    marginBottom: 30,
-  },
-  progressLabelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  progressBarBackground: {
-    height: 8,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
   tasksContainer: {
     gap: 16,
   },
-  taskRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  taskIcon: {
-    width: 40,
-    alignItems: 'center',
-  },
-  taskLabel: {
-    flex: 1,
-    fontSize: 16,
-    marginLeft: 10,
-  },
-  checkbox: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: '#3B82F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: '#3B82F6',
-  }
 });
+

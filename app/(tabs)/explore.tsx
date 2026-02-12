@@ -1,17 +1,14 @@
-import { StyleSheet, Dimensions, ScrollView, View } from 'react-native';
-import { useCallback, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
-import { LineChart, BarChart } from 'react-native-chart-kit';
 import { format, subDays } from 'date-fns';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { StatGrid } from '@/components/history/StatGrid';
+import { WeeklyChart } from '@/components/history/WeeklyChart';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { DailyProgress, TASKS } from '@/types';
 import { getStorageData, getStreak } from '@/utils/storage';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { TASKS, DailyProgress } from '@/types';
-
-const screenWidth = Dimensions.get('window').width;
 
 export default function HistoryScreen() {
   const [loading, setLoading] = useState(true);
@@ -19,7 +16,6 @@ export default function HistoryScreen() {
   const [streak, setStreak] = useState(0);
   const [perfectDays, setPerfectDays] = useState(0);
   const [totalDays, setTotalDays] = useState(0);
-  const colorScheme = useColorScheme();
 
   const loadData = async () => {
     try {
@@ -77,8 +73,6 @@ export default function HistoryScreen() {
   };
 
   const getTaskCompletionStats = () => {
-    // Calculate total success per category
-    // This requires iterating all history. simplified for now.
     return TASKS.map(task => {
       let count = 0;
       Object.values(history).forEach(day => {
@@ -88,26 +82,8 @@ export default function HistoryScreen() {
     });
   };
 
-  // Only show if we have data, else plain 0s
   const chartData = getLast7DaysData();
   const taskStats = getTaskCompletionStats();
-
-  const chartConfig = {
-    backgroundColor: colorScheme === 'dark' ? '#1e1e1e' : '#ffffff',
-    backgroundGradientFrom: colorScheme === 'dark' ? '#1e1e1e' : '#ffffff',
-    backgroundGradientTo: colorScheme === 'dark' ? '#1e1e1e' : '#ffffff',
-    decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
-    labelColor: (opacity = 1) => colorScheme === 'dark' ? `rgba(255, 255, 255, ${opacity})` : `rgba(0, 0, 0, ${opacity})`,
-    style: {
-      borderRadius: 16
-    },
-    propsForDots: {
-      r: "6",
-      strokeWidth: "2",
-      stroke: "#3B82F6"
-    }
-  };
 
   return (
     <ThemedView style={styles.container}>
@@ -116,40 +92,13 @@ export default function HistoryScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <ThemedText style={styles.statValue}>{streak}</ThemedText>
-            <ThemedText style={styles.statLabel}>Current Streak</ThemedText>
-          </View>
-          <View style={styles.statCard}>
-            <ThemedText style={styles.statValue}>{perfectDays}</ThemedText>
-            <ThemedText style={styles.statLabel}>Perfect Days</ThemedText>
-          </View>
-          <View style={styles.statCard}>
-            <ThemedText style={styles.statValue}>{totalDays}</ThemedText>
-            <ThemedText style={styles.statLabel}>Total Days</ThemedText>
-          </View>
-        </View>
+        <StatGrid streak={streak} perfectDays={perfectDays} totalDays={totalDays} />
 
-        <ThemedText type="subtitle" style={styles.sectionTitle}>7-Day Progress</ThemedText>
-        <ThemedText style={styles.chartSubtitle}>Daily completion percentage</ThemedText>
-
-        <LineChart
-          data={chartData}
-          width={screenWidth - 40}
-          height={220}
-          chartConfig={chartConfig}
-          bezier
-          style={styles.chart}
-        />
+        <WeeklyChart data={chartData} />
 
         <ThemedText type="subtitle" style={styles.sectionTitle}>Challenge Completion Rates</ThemedText>
         <ThemedText style={styles.chartSubtitle}>Overall success by category</ThemedText>
 
-        {/* Simple Bar Chart for Task distribution is complex with library without clearer mapping, 
-                     sticking to simple stats or just the line chart for now to keep it clean as requested.
-                     Maybe just a list of stats?
-                  */}
         <View style={styles.statsList}>
           {TASKS.map((task, index) => (
             <View key={task.id} style={styles.statRow}>
@@ -173,39 +122,14 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 20,
   },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 30,
-  },
-  statCard: {
-    backgroundColor: 'rgba(150, 150, 150, 0.1)',
-    padding: 15,
-    borderRadius: 12,
-    alignItems: 'center',
-    width: '30%',
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 10,
-    textAlign: 'center',
-    opacity: 0.7,
-  },
   sectionTitle: {
     marginBottom: 4,
+    marginTop: 20,
   },
   chartSubtitle: {
     fontSize: 12,
     opacity: 0.6,
     marginBottom: 10,
-  },
-  chart: {
-    marginVertical: 8,
-    borderRadius: 16,
   },
   statsList: {
     marginTop: 10,
@@ -221,3 +145,4 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(150,150,150, 0.2)',
   }
 });
+
